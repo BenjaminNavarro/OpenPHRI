@@ -25,12 +25,15 @@ PID_Package(
 
 check_PID_Platform(CONFIGURATION posix)
 
-#now finding packages
 PID_Dependency(api-driver-vrep VERSION 1.0)
 PID_Dependency(eigen-extensions VERSION 0.6)
 PID_Dependency(pid-rpath VERSION 2.0)
 PID_Dependency(rbdyn VERSION 1.3)
 PID_Dependency(yaml-cpp)
+
+if(BUILD_AND_RUN_TESTS)
+	PID_Dependency(catch2)
+endif()
 
 if(GEN_PYTHON_BINDINGS)
 	PID_Dependency(boost)
