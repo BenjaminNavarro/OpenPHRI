@@ -51,7 +51,7 @@ make deploy package=open-phri version=<version number>
 
 ## Standalone install
  ```
-git clone https://github.com/BenjaminNavarro/open-phri.git
+git clone https://github.com/open-phri/open-phri.git
 cd open-phri
 ```
 
