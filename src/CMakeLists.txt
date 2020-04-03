@@ -7,19 +7,38 @@ PID_Component(
     SHARED_LIB
     NAME open-phri
     DIRECTORY OpenPHRI
-    CXX_STANDARD 14
-    EXPORT eigen-extensions rpathlib libyaml
-    DEPEND rbdyn rbdyn-parsers
-    RUNTIME_RESOURCES robot_models
+    CXX_STANDARD 17
+    EXPORT 
+        eigen-extensions/eigen-extensions 
+        pid-rpath/rpathlib
+        yaml-cpp/libyaml
+        physical-quantities/physical-quantities
+    DEPEND 
+        rbdyn/rbdyn 
+        rbdyn/rbdyn-parsers
+    RUNTIME_RESOURCES 
+        robot_models
     ${OPENMP_COMPONENT_OPTIONS}
 )
+
+if(BUILD_AND_RUN_TESTS)
+    PID_Component(
+        test-utils
+        EXPORT open-phri/open-phri
+    )
+endif()
 
 ###         OpenPHRI V-REP DRIVER        ###
 PID_Component(
     SHARED_LIB
     NAME open-phri-vrep-driver
     DIRECTORY vrep_driver
-    EXPORT open-phri vrep-driver
+    EXPORT 
+        open-phri/open-phri 
+    DEPEND
+        api-driver-vrep/vrep-driver
+    RUNTIME_RESOURCES 
+        vrep_scenes
 )
 
 ###         pyOpenPHRI        ###
@@ -28,7 +47,7 @@ if(GEN_PYTHON_BINDINGS)
         MODULE_LIB
         NAME openphri
         DIRECTORY pyOpenPHRI
-        DEPEND open-phri open-phri-vrep-driver boost-python
+        DEPEND open-phri/open-phri open-phri/vrep-driver boost/boost-python
     )
 
     PID_Component_Dependency(

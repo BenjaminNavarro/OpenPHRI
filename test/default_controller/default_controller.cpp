@@ -1,22 +1,21 @@
-#undef NDEBUG
-
 #include <OpenPHRI/OpenPHRI.h>
+#include "utils.h"
 
-using namespace phri;
-using namespace std;
+int main(int argc, char const* argv[]) {
+    using namespace spatial::literals;
 
-int main(int argc, char const *argv[]) {
+    auto [robot, model, driver] = TestData{};
 
-	auto robot = make_shared<Robot>(
-		"rob",  // Robot's name
-		7);     // Robot's joint count
+    driver.jointState().position().setOnes();
 
-	auto safety_controller = SafetyController(robot);
-	safety_controller.setVerbose(true);
+    model.forwardKinematics();
 
-	safety_controller.compute();
+    auto safety_controller = phri::SafetyController(robot);
+    safety_controller.setVerbose(true);
 
-	assert(static_cast<const Vector6d&>(*robot->controlPointVelocity()).isZero());
+    safety_controller.compute();
 
-	return 0;
+    assert(robot.task().command().velocity().isZero());
+
+    return 0;
 }

@@ -1,27 +1,28 @@
 /*      File: potential_field_generator.h
-*       This file is part of the program open-phri
-*       Program description : OpenPHRI: a generic framework to easily and safely control robots in interactions with humans
-*       Copyright (C) 2017 -  Benjamin Navarro (LIRMM). All Right reserved.
-*
-*       This software is free software: you can redistribute it and/or modify
-*       it under the terms of the LGPL license as published by
-*       the Free Software Foundation, either version 3
-*       of the License, or (at your option) any later version.
-*       This software is distributed in the hope that it will be useful,
-*       but WITHOUT ANY WARRANTY without even the implied warranty of
-*       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-*       LGPL License for more details.
-*
-*       You should have received a copy of the GNU Lesser General Public License version 3 and the
-*       General Public License version 3 along with this program.
-*       If not, see <http://www.gnu.org/licenses/>.
-*/
-
+ *       This file is part of the program open-phri
+ *       Program description : OpenPHRI: a generic framework to easily and
+ * safely control robots in interactions with humans Copyright (C) 2017 -
+ * Benjamin Navarro (LIRMM). All Right reserved.
+ *
+ *       This software is free software: you can redistribute it and/or modify
+ *       it under the terms of the LGPL license as published by
+ *       the Free Software Foundation, either version 3
+ *       of the License, or (at your option) any later version.
+ *       This software is distributed in the hope that it will be useful,
+ *       but WITHOUT ANY WARRANTY without even the implied warranty of
+ *       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *       LGPL License for more details.
+ *
+ *       You should have received a copy of the GNU Lesser General Public
+ * License version 3 and the General Public License version 3 along with this
+ * program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /**
  * @file potential_field_generator.h
  * @author Benjamin Navarro
- * @brief Definition of the PotentialFieldGenerator class and related PotentialFieldType enum and PotentialFieldObject struct.
+ * @brief Definition of the PotentialFieldGenerator class and related
+ * PotentialFieldType enum and PotentialFieldObject struct.
  * @date April 2017
  * @ingroup OpenPHRI
  */
@@ -31,6 +32,11 @@
 #include <OpenPHRI/force_generators/force_generator.h>
 #include <OpenPHRI/utilities/object_collection.hpp>
 #include <OpenPHRI/definitions.h>
+#include <OpenPHRI/detail/universal_wrapper.hpp>
+
+#include <physical_quantities/spatial/position.h>
+#include <physical_quantities/spatial/force.h>
+
 #include <map>
 
 namespace phri {
@@ -38,64 +44,77 @@ namespace phri {
 /** @enum phri::PotentialFieldType
  *  @brief Defines if a PotentialFieldObject is repulsive or attractive.
  */
-enum class PotentialFieldType {
-	Attractive,
-	Repulsive
-};
+enum class PotentialFieldType { Attractive, Repulsive };
 
 /** @brief Hold the required property for any object of the potential field.
  */
 struct PotentialFieldObject {
-	PotentialFieldObject(
-		PotentialFieldType type,
-		doubleConstPtr gain,
-		doubleConstPtr threshold_distance,
-		PoseConstPtr object_position) :
-		type(type),
-		gain(gain),
-		threshold_distance(threshold_distance),
-		object_position(object_position)
-	{
+    template <typename GainT, typename ThresT, typename PosT>
+    PotentialFieldObject(PotentialFieldType type, GainT&& gain,
+                         ThresT&& threshold_distance, PosT&& object_position)
+        : type_(type),
+          gain_(std::forward<GainT>(gain)),
+          threshold_distance_(std::forward<ThresT>(threshold_distance)),
+          object_position_(std::forward<PosT>(object_position)) {
+    }
 
-	}
+    PotentialFieldType type() const;
 
-	PotentialFieldType type;            /**< Type of object. See PotentialFieldType. */
-	doubleConstPtr gain;                /**< Gain applied to get the resulting force. */
-	doubleConstPtr threshold_distance;  /**< Distance at which the object's attractive or repulsive effect will start. */
-	PoseConstPtr object_position;   /**< Object position in the chosen frame. */
+    void setGain(const double& gain);
+    const double& getGain() const;
+
+    void setThresholdDistance(const double& threshold);
+    const double& getThresholdDistance() const;
+
+    void setObjectPosition(const spatial::Position& position);
+    const spatial::Position& getObjectPosition() const;
+
+private:
+    PotentialFieldType type_; /**< Type of object. See PotentialFieldType. */
+    detail::UniversalWrapper<double>
+        gain_; /**< Gain applied to get the resulting force. */
+    detail::UniversalWrapper<double>
+        threshold_distance_; /**< Distance at which the object's attractive or
+                               repulsive effect will start. */
+    detail::UniversalWrapper<spatial::Position>
+        object_position_; /**< Object position in the chosen frame. */
 };
-
-using PotentialFieldObjectPtr = std::shared_ptr<PotentialFieldObject>;
-using PotentialFieldObjectConstPtr = std::shared_ptr<const PotentialFieldObject>;
 
 /** @brief A potential field generator for basic collision avoidance.
- *  @details Use a set of PotentialFieldObject to determine which force has to be applied to the TCP. "Based on Real-time obstacle avoidance for manipulators and mobile robots" by O. Khatib.
+ *  @details Use a set of PotentialFieldObject to determine which force has to
+ * be applied to the TCP. "Based on Real-time obstacle avoidance for
+ * manipulators and mobile robots" by O. Khatib.
  */
-class PotentialFieldGenerator : public ForceGenerator, public ObjectCollection<PotentialFieldObjectPtr> {
+class PotentialFieldGenerator : public ForceGenerator,
+                                public ObjectCollection<PotentialFieldObject> {
 public:
+    /**
+     * @brief Construct a potential field generator where objects position are
+     * given in the specified frame.
+     */
+    PotentialFieldGenerator();
 
-	/**
-	 * @brief Construct a potential field generator where objects position are given in the specified frame.
-	 * @param objects_frame The frame in which the positons of the objects are expressed .
-	 */
-	explicit PotentialFieldGenerator(ReferenceFrame objects_frame = ReferenceFrame::TCP);
+    /**
+     * @brief Construct a potential field generator where objects position are
+     * given in the specified frame.
+     * @param offset An offset in the TCP frame at which the distances will be
+     * computed.
+     */
+    template <typename OffsetT>
+    PotentialFieldGenerator(OffsetT&& offset)
+        : offset_{std::forward<OffsetT>(offset)} {
+    }
 
-	/**
-	 * @brief Construct a potential field generator where objects position are given in the specified frame.
-	 * @param offset An offset in the TCP frame at which the distances will be computed.
-	 * @param objects_frame The frame in which the positons of the objects are expressed.
-	 */
-	PotentialFieldGenerator(Vector3dConstPtr offset, ReferenceFrame objects_frame = ReferenceFrame::TCP);
-	virtual ~PotentialFieldGenerator() = default;
+    virtual ~PotentialFieldGenerator() = default;
+
+    void setOffset(const spatial::LinearPosition& offset);
+
+    const spatial::LinearPosition& getOffset() const;
 
 protected:
-	virtual void update(Vector6d& force) override;
+    virtual void update(spatial::Force& force) override;
 
-	ReferenceFrame objects_frame_;
-	Vector3dConstPtr offset_;
+    detail::UniversalWrapper<spatial::LinearPosition> offset_;
 };
-
-using PotentialFieldGeneratorPtr = std::shared_ptr<PotentialFieldGenerator>;
-using PotentialFieldGeneratorConstPtr = std::shared_ptr<const PotentialFieldGenerator>;
 
 } // namespace phri

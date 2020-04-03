@@ -1,0 +1,67 @@
+/*      File: force_constraint.cpp
+ *       This file is part of the program open-phri
+ *       Program description : OpenPHRI: a generic framework to easily and
+ * safely control robots in interactions with humans Copyright (C) 2017 -
+ * Benjamin Navarro (LIRMM). All Right reserved.
+ *
+ *       This software is free software: you can redistribute it and/or modify
+ *       it under the terms of the LGPL license as published by
+ *       the Free Software Foundation, either version 3
+ *       of the License, or (at your option) any later version.
+ *       This software is distributed in the hope that it will be useful,
+ *       but WITHOUT ANY WARRANTY without even the implied warranty of
+ *       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *       LGPL License for more details.
+ *
+ *       You should have received a copy of the GNU Lesser General Public
+ * License version 3 and the General Public License version 3 along with this
+ * program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <OpenPHRI/constraints/force_constraint.h>
+#include <limits>
+
+using namespace phri;
+
+using namespace Eigen;
+
+class ForceLimitationVelocityGenerator : public VelocityGenerator {
+public:
+    ForceLimitationVelocityGenerator(const Vector6d& external_force,
+                                     std::shared_ptr<const double> maximum_force)
+        : VelocityGenerator(ReferenceFrame::TCP),
+          external_force_(external_force),
+          maximum_force_(maximum_force) {
+    }
+
+    virtual void update(spatial::Velocity& velocity) override {
+        double f_norm = external_force_.norm();
+
+        if (f_norm > *maximum_force_) {
+            velocity = external_force_ * 1e12; // Just something huge
+        } else {
+            velocity = spatial::Velocity();
+        }
+    }
+
+private:
+    const Vector6d& external_force_;
+    std::shared_ptr<const double> maximum_force_;
+};
+
+/***		Constructor & destructor		***/
+ForceConstraint::ForceConstraint(std::shared_ptr<VelocityConstraint> constraint,
+                                 std::shared_ptr<const double> maximum_force)
+    : constraint_(constraint), maximum_force_(maximum_force) {
+    velocity_generator_ = std::make_shared<ForceLimitationVelocityGenerator>(
+        robot_->task().state.wrench, maximum_force_);
+}
+
+/***		Algorithm		***/
+double ForceConstraint::compute() {
+    return constraint_->compute();
+}
+
+std::shared_ptr<VelocityGenerator> ForceConstraint::getVelocityGenerator() const {
+    return velocity_generator_;
+}
